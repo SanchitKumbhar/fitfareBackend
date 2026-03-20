@@ -9,7 +9,7 @@ const app = express();
 
 app.use(
 	cors({
-		origin: process.env.CORS_ORIGIN || 'http://localhost:8080',
+		origin: process.env.CORS_ORIGIN || 'http://15.207.11.4',
 		credentials: true,
 	})
 );
