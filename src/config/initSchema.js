@@ -1,0 +1,60 @@
+const { pool } = require('./mysql');
+
+async function initSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(120) NOT NULL,
+      email VARCHAR(191) NOT NULL UNIQUE,
+      password VARCHAR(255) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS foods (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      name VARCHAR(150) NOT NULL,
+      calories INT NOT NULL DEFAULT 0,
+      protein DECIMAL(10,2) NOT NULL DEFAULT 0,
+      carbs DECIMAL(10,2) NOT NULL DEFAULT 0,
+      fats DECIMAL(10,2) NOT NULL DEFAULT 0,
+      image_url VARCHAR(255) DEFAULT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      CONSTRAINT fk_foods_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS meals (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      food_id INT NOT NULL,
+      meal_type ENUM('breakfast', 'lunch', 'dinner', 'snacks') NOT NULL,
+      date DATE NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT fk_meals_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      CONSTRAINT fk_meals_food FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE,
+      INDEX idx_meals_user_date (user_id, date)
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS day_completions (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      date DATE NOT NULL,
+      completed TINYINT(1) NOT NULL DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_day_completion_user_date (user_id, date),
+      CONSTRAINT fk_day_completion_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+}
+
+module.exports = {
+  initSchema,
+};
