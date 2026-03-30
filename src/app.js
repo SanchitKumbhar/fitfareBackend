@@ -1,40 +1,34 @@
 const path = require('path');
-const cors = require('cors');
-const express = require('express');
-require('dotenv').config();
+const dotenv = require('dotenv');
 
-const apiRoutes = require('./routes');
-const notFound = require('./middlewares/notFound');
-const errorHandler = require('./middlewares/errorHandler');
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-const app = express();
+const app = require('./app');
+const { ensureDatabaseExists } = require('./config/bootstrapDatabase');
+const { testMySqlConnection } = require('./config/mysql');
+const { initSchema } = require('./config/initSchema');
 
-const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
-  .split(',')
-  .map(origin => origin.trim())
-  .filter(Boolean);
+const PORT = process.env.PORT || 5000;
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
+const startServer = async () => {
+  try {
+    await ensureDatabaseExists();
+    console.log('✅ Database ensured');
 
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
+    await testMySqlConnection();
+    console.log('✅ MySQL connected successfully');
 
-    return callback(new Error(`CORS blocked for origin: ${origin}`));
-  },
-  credentials: true,
+    await initSchema();
+    console.log('✅ Database schema ensured');
+
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to start server:', error.message);
+    process.exit(1);
+  }
 };
 
-app.use(cors(corsOptions));   // ✅ ONLY THIS
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
-app.use('/api', apiRoutes);
-
-app.use(notFound);
-app.use(errorHandler);
-
-module.exports = app;
+startServer();
